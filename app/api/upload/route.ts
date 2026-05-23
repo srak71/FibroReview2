@@ -1,15 +1,4 @@
-/**
- * POST /api/upload  -- multipart/form-data with field "file" (PDF).
- *
- * Flow:
- *   1. Parse the FibroScan PDF in memory (pdf-parse).
- *   2. Upload the PDF to Vercel Blob storage for archival / re-parsing.
- *   3. Insert a new patient row in Postgres with the parsed payload.
- *   4. Return the created row so the UI can navigate to it.
- */
-
 import { NextRequest, NextResponse } from "next/server";
-import { put } from "@vercel/blob";
 import { parseFibroScanPdf } from "@/lib/parser";
 import { createPatient } from "@/lib/db";
 
@@ -37,23 +26,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Upload PDF to Blob (optional but useful for re-parsing/audit).
-    let pdfUrl: string | null = null;
-    if (process.env.BLOB_READ_WRITE_TOKEN) {
-      const safeName = file.name.replace(/[^A-Za-z0-9._-]/g, "_");
-      const upload = await put(`pdfs/${Date.now()}_${safeName}`, buf, {
-        access: "private",
-        contentType: "application/pdf",
-      });
-      pdfUrl = upload.url;
-    }
-
     const row = await createPatient({
       patient_name: parsed.patientName,
       patient_code: parsed.patientCode,
       date_of_exam: parsed.dateOfExam,
       parsed,
-      pdf_blob_url: pdfUrl,
+      pdf_blob_url: null,
     });
 
     return NextResponse.json({ ok: true, id: row.id, patient: row });
