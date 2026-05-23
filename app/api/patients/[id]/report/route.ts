@@ -15,7 +15,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   const buf = await buildReportDocx(row);
   const safe = row.patient_name.replace(/[^A-Za-z0-9._-]+/g, "_");
-  return new NextResponse(buf, {
+  return new NextResponse(new Uint8Array(buf), {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "Content-Disposition": `attachment; filename="FibroScan_Report_${safe}.docx"`,
