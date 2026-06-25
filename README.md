@@ -24,8 +24,8 @@ flowchart TD
         Postgres[("Neon Postgres\npatients\nrecommendation_history")]
     end
 
-    subgraph LLM["Anthropic API"]
-        Claude["claude-opus-4-8\nadaptive thinking"]
+    subgraph LLM["Groq API (free)"]
+        Llama["llama-3.3-70b-versatile\nfree tier"]
     end
 
     UI_Home -->|"Upload PDF"| RT_Upload
@@ -38,8 +38,8 @@ flowchart TD
 
     UI_Patient -->|"Get AI Suggestion"| RT_RAG
     RT_RAG -->|"Query similar recs"| Postgres
-    RT_RAG -->|"Prompt with context"| Claude
-    Claude -->|"Suggestion text"| RT_RAG
+    RT_RAG -->|"Prompt with context"| Llama
+    Llama -->|"Suggestion text"| RT_RAG
     RT_RAG -->|"Return suggestion"| UI_Patient
 ```
 
@@ -47,7 +47,7 @@ flowchart TD
 
 ## RAG Pipeline (Recommendation AI)
 
-Every time a physician saves non-empty recommendations, the text is automatically ingested into `recommendation_history` alongside the patient's clinical context (LSM, CAP, fibrosis stage, steatosis grade, etiology). When the physician clicks **Get AI Suggestion**, the RAG endpoint retrieves the most relevant past recommendations and sends them to Claude as few-shot examples.
+Every time a physician saves non-empty recommendations, the text is automatically ingested into `recommendation_history` alongside the patient's clinical context (LSM, CAP, fibrosis stage, steatosis grade, etiology). When the physician clicks **Get AI Suggestion**, the RAG endpoint retrieves the most relevant past recommendations and sends them to Llama 3.3 70B (via Groq) as few-shot examples.
 
 ```mermaid
 sequenceDiagram
@@ -56,7 +56,7 @@ sequenceDiagram
     participant PATCH as PATCH /api/patients/:id
     participant RAG as POST /api/rag
     participant DB as Neon Postgres
-    participant Claude as claude-opus-4-8
+    participant Groq as llama-3.3-70b-versatile (Groq)
 
     Physician->>Page: Edits recommendations, clicks Save
     Page->>PATCH: { edited, recommendations, ... }
@@ -68,8 +68,8 @@ sequenceDiagram
     Page->>RAG: { fibrosis, steatosis, etiology, lsm, cap, currentRecommendations }
     RAG->>DB: SELECT * FROM recommendation_history\nWHERE fibrosis = ? AND etiology = ?\nORDER BY created_at DESC LIMIT 8
     DB-->>RAG: Similar past recommendations
-    RAG->>Claude: System prompt + patient context + retrieved examples
-    Claude-->>RAG: Generated suggestion (adaptive thinking)
+    RAG->>Groq: System prompt + patient context + retrieved examples
+    Groq-->>RAG: Generated suggestion
     RAG-->>Page: { suggestion }
     Page->>Physician: Suggestion fills recommendations textarea\n(editable before saving)
 ```
@@ -232,7 +232,7 @@ LSM reliability is flagged per EASL/AGA: IQR/Median ≤ 30% (or ≤ 20% if LSM <
 
 - Node.js ≥ 18
 - A Neon (or any Postgres) database
-- An Anthropic API key (for the AI suggestion feature)
+- A Groq API key — free at [console.groq.com](https://console.groq.com) (for AI suggestions)
 
 ### Setup
 
@@ -271,7 +271,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 See **[DEPLOY.md](./DEPLOY.md)** for a step-by-step, no-command-line Vercel guide (~10 minutes).
 
-After deploying, add `ANTHROPIC_API_KEY` in Vercel → your project → **Settings → Environment Variables**, then redeploy.
+After deploying, add `GROQ_API_KEY` in Vercel → your project → **Settings → Environment Variables**, then redeploy. Get a free key at [console.groq.com](https://console.groq.com).
 
 ---
 
@@ -287,7 +287,7 @@ flowchart TD
     E -->|"Yes"| G["Write Recommendations"]
     F --> G
     G --> H{"Need inspiration?"}
-    H -->|"Yes"| I["Click 'Get AI Suggestion'\nRAG retrieves similar cases\nClaude drafts recommendation"]
+    H -->|"Yes"| I["Click 'Get AI Suggestion'\nRAG retrieves similar cases\nLlama 3.3 70B drafts recommendation"]
     I --> J["Physician edits suggestion"]
     H -->|"No"| K["Type recommendations manually"]
     J --> L["Save & Mark Completed"]
