@@ -60,17 +60,17 @@ project. No copy/paste of credentials needed.
 
 This adds `BLOB_READ_WRITE_TOKEN` automatically.
 
-## Step 5 — Add the Anthropic API key (for AI suggestions)
+## Step 5 — Add the Groq API key (for AI suggestions — free)
 
-The **Get AI Suggestion** button on each report is powered by Claude. You need
-a free Anthropic API key for it to work.
+The **Get AI Suggestion** button is powered by Groq's free LLM API
+(Llama 3.3 70B). Groq offers a generous free tier with no credit card required.
 
-1. Go to <https://console.anthropic.com> and sign up / sign in.
-2. Click **API Keys** in the left sidebar -> **Create Key** -> copy the key
-   (starts with `sk-ant-`).
+1. Go to <https://console.groq.com> and sign up / sign in (free).
+2. Click **API Keys** in the left sidebar -> **Create API Key** -> copy the key
+   (starts with `gsk_`).
 3. Back in Vercel, open your project -> **Settings** -> **Environment Variables**.
 4. Click **Add** and fill in:
-   - **Name**: `ANTHROPIC_API_KEY`
+   - **Name**: `GROQ_API_KEY`
    - **Value**: paste your key
    - **Environments**: check Production, Preview, and Development
 5. Click **Save**.
@@ -133,7 +133,8 @@ For a non-developer: just edit a file in the GitHub web UI and click commit.
 - **PDF parses with missing fields**: the parser is tuned for FibroScan 530
   Compact reports. Other devices may need regex tweaks in
   `lib/parser.ts`.
-- **"Get AI Suggestion" shows an error**: check that `ANTHROPIC_API_KEY` is set
-  in Vercel -> Settings -> Environment Variables, then redeploy.
+- **"Get AI Suggestion" shows an error**: check that `GROQ_API_KEY` is set
+  in Vercel -> Settings -> Environment Variables (get a free key at
+  console.groq.com), then redeploy.
 - **Need to wipe the database**: in Vercel Storage -> Postgres -> Data tab,
   run `DELETE FROM patients;`.

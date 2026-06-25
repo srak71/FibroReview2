@@ -5,16 +5,17 @@
  * Returns: { suggestion: string }
  *
  * Retrieves similar past recommendations from recommendation_history,
- * then asks Claude to synthesize a suggestion for the current patient.
+ * then uses Groq (free tier, llama-3.3-70b-versatile) to synthesize a suggestion.
+ * Get a free API key at https://console.groq.com
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import Groq from "groq-sdk";
 import { similarRecommendations } from "@/lib/db";
 
 export const runtime = "nodejs";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 export async function POST(req: NextRequest) {
   try {
@@ -55,19 +56,13 @@ ${historyBlock}
 
 Based on the clinical findings and the examples above, write a concise, clinically appropriate recommendation paragraph for this patient. Focus on follow-up interval, lifestyle counseling, and any indicated referrals. Do not invent lab values or imaging not mentioned. Write in professional medical prose, 2-4 sentences.`;
 
-    const stream = anthropic.messages.stream({
-      model: "claude-opus-4-8",
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
       max_tokens: 512,
-      thinking: { type: "adaptive" },
       messages: [{ role: "user", content: prompt }],
     });
 
-    const message = await stream.finalMessage();
-    const suggestion = message.content
-      .filter((b) => b.type === "text")
-      .map((b) => (b as any).text)
-      .join("")
-      .trim();
+    const suggestion = completion.choices[0]?.message?.content?.trim() ?? "";
 
     return NextResponse.json({ ok: true, suggestion });
   } catch (e: any) {

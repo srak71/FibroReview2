@@ -248,7 +248,7 @@ vercel link && vercel env pull .env.local
 cat > .env.local <<EOF
 POSTGRES_URL=postgresql://...
 BLOB_READ_WRITE_TOKEN=...
-ANTHROPIC_API_KEY=sk-ant-...
+GROQ_API_KEY=gsk_...
 EOF
 
 npm run dev
@@ -263,7 +263,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `POSTGRES_URL` | Yes | Neon / Postgres connection string |
 | `POSTGRES_DATABASE_URL` | Fallback | Vercel preview environment alias |
 | `BLOB_READ_WRITE_TOKEN` | Yes | Vercel Blob token for PDF storage |
-| `ANTHROPIC_API_KEY` | Yes (for RAG) | Anthropic API key for AI suggestions |
+| `GROQ_API_KEY` | Yes (for RAG) | Groq API key for AI suggestions (free at console.groq.com) |
 
 ---
 
@@ -309,5 +309,5 @@ flowchart TD
 | File storage | Vercel Blob |
 | PDF parsing | `pdf-parse` + custom regex |
 | Report generation | `docx` (programmatic .docx builder) |
-| AI / RAG | Anthropic `claude-opus-4-8` via `@anthropic-ai/sdk` |
+| AI / RAG | Groq `llama-3.3-70b-versatile` via `groq-sdk` (free tier) |
 | Deployment | Vercel |
