@@ -60,7 +60,26 @@ project. No copy/paste of credentials needed.
 
 This adds `BLOB_READ_WRITE_TOKEN` automatically.
 
-## Step 5 — Redeploy so the new env vars take effect
+## Step 5 — Add the Anthropic API key (for AI suggestions)
+
+The **Get AI Suggestion** button on each report is powered by Claude. You need
+a free Anthropic API key for it to work.
+
+1. Go to <https://console.anthropic.com> and sign up / sign in.
+2. Click **API Keys** in the left sidebar -> **Create Key** -> copy the key
+   (starts with `sk-ant-`).
+3. Back in Vercel, open your project -> **Settings** -> **Environment Variables**.
+4. Click **Add** and fill in:
+   - **Name**: `ANTHROPIC_API_KEY`
+   - **Value**: paste your key
+   - **Environments**: check Production, Preview, and Development
+5. Click **Save**.
+
+> The AI suggestion feature is optional — all other functionality (PDF upload,
+> grading, save, .docx download) works without this key. If the key is missing,
+> clicking "Get AI Suggestion" will show an error but won't break anything else.
+
+## Step 6 — Redeploy so the new env vars take effect
 
 1. Go to **Deployments** in your project.
 2. On the latest deployment, click the **...** menu -> **Redeploy** ->
@@ -68,7 +87,7 @@ This adds `BLOB_READ_WRITE_TOKEN` automatically.
 
 When it goes green, you're live. Open the URL.
 
-## Step 6 — Share with your team
+## Step 7 — Share with your team
 
 Copy the production URL (e.g. `https://fibroscan-reviewer.vercel.app`) and
 send it to the physicians and receptionists. They don't need a Vercel account
@@ -95,7 +114,9 @@ or any login — anyone with the link can view and edit.
 3. Verify the auto-extracted LSM and CAP scores. Correct anything wrong.
 4. Adjust **Etiology Context** if appropriate (NAFLD uses Eddowes thresholds;
    other etiologies use Karlas thresholds).
-5. Type into **Recommendations**.
+5. Type into **Recommendations**, or click **Get AI Suggestion** to have Claude
+   draft a recommendation based on prior reports with similar clinical findings.
+   Review and edit the suggestion before saving.
 6. Click **Save & Mark Completed**. The card turns **green** for everyone.
 7. Optionally click **Download .docx** to get the printable report.
 
@@ -112,5 +133,7 @@ For a non-developer: just edit a file in the GitHub web UI and click commit.
 - **PDF parses with missing fields**: the parser is tuned for FibroScan 530
   Compact reports. Other devices may need regex tweaks in
   `lib/parser.ts`.
+- **"Get AI Suggestion" shows an error**: check that `ANTHROPIC_API_KEY` is set
+  in Vercel -> Settings -> Environment Variables, then redeploy.
 - **Need to wipe the database**: in Vercel Storage -> Postgres -> Data tab,
   run `DELETE FROM patients;`.

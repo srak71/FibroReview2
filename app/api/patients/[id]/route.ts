@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { deletePatient, getPatient, updatePatient } from "@/lib/db";
+import { deletePatient, getPatient, ingestRecommendation, updatePatient } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -30,6 +30,21 @@ export async function PATCH(req: NextRequest, { params }: RouteCtx) {
       status: body.status,
     });
     if (!row) return NextResponse.json({ error: "not found" }, { status: 404 });
+
+    // Ingest recommendations into RAG history whenever non-empty text is saved.
+    if (body.recommendations?.trim()) {
+      const edited = body.edited ?? {};
+      await ingestRecommendation({
+        patient_id: params.id,
+        text: body.recommendations,
+        lsm: edited.lsm ?? null,
+        cap: edited.capScore ?? null,
+        fibrosis: edited.fibrosisStageSummary ?? edited.fibrosisStageOverride ?? null,
+        steatosis: edited.steatosisGrade ?? edited.steatosisGradeOverride ?? null,
+        etiology: edited.etiology ?? null,
+      }).catch(() => {/* non-critical — don't fail the save */});
+    }
+
     return NextResponse.json({ ok: true, patient: row });
   } catch (e: any) {
     return NextResponse.json({ error: String(e?.message ?? e) }, { status: 500 });

@@ -41,6 +41,8 @@ export default function PatientPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   // Local editable form state
   const [form, setForm] = useState<any>(null);
@@ -72,6 +74,34 @@ export default function PatientPage() {
   useEffect(() => { load(); }, [load]);
 
   const update = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));
+
+  const handleAiSuggest = async () => {
+    if (!form) return;
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const r = await fetch("/api/rag", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          patientId: id,
+          fibrosis: form.fibrosisStageOverride ?? form.fibrosisStageSummary ?? null,
+          steatosis: form.steatosisGradeOverride ?? form.steatosisGrade ?? null,
+          etiology: form.etiology ?? null,
+          lsm: form.lsm ?? null,
+          cap: form.capScore ?? null,
+          currentRecommendations: form.recommendations ?? "",
+        }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || "AI suggestion failed");
+      update("recommendations", j.suggestion);
+    } catch (e: any) {
+      setAiError(e.message);
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const handleSave = async (markCompleted?: boolean) => {
     if (!form) return;
@@ -207,6 +237,21 @@ export default function PatientPage() {
           rows={6}
           placeholder="e.g. Repeat FibroScan in 12 months. Counsel on weight loss and lifestyle modification..."
         />
+        <div className="sm:col-span-2 flex flex-col gap-2">
+          <button
+            onClick={handleAiSuggest}
+            disabled={aiLoading}
+            className="self-start text-sm px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white rounded-md"
+          >
+            {aiLoading ? "Generating..." : "Get AI Suggestion"}
+          </button>
+          {aiError && (
+            <p className="text-xs text-red-600">{aiError}</p>
+          )}
+          <p className="text-xs text-slate-500">
+            AI suggests recommendations based on prior reports with similar fibrosis stage and etiology. Review and edit before saving.
+          </p>
+        </div>
       </Section>
 
       <div className="sticky bottom-4 bg-white card p-4 flex flex-wrap items-center justify-between gap-3">

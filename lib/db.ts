@@ -51,6 +51,20 @@ export async function ensureSchema(): Promise<void> {
   `;
   await sql`CREATE INDEX IF NOT EXISTS patients_status_idx ON patients(status);`;
   await sql`CREATE INDEX IF NOT EXISTS patients_updated_idx ON patients(updated_at DESC);`;
+  await sql`
+    CREATE TABLE IF NOT EXISTS recommendation_history (
+      id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      patient_id  uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+      text        text NOT NULL,
+      lsm         numeric,
+      cap         numeric,
+      fibrosis    text,
+      steatosis   text,
+      etiology    text,
+      created_at  timestamptz NOT NULL DEFAULT now()
+    );
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS rec_history_patient_idx ON recommendation_history(patient_id);`;
   initialised = true;
 }
 
@@ -146,4 +160,61 @@ export async function deletePatient(id: string): Promise<void> {
   await ensureSchema();
   const sql = getDb();
   await sql`DELETE FROM patients WHERE id = ${id};`;
+}
+
+export interface RecommendationHistoryRow {
+  id: string;
+  patient_id: string;
+  text: string;
+  lsm: number | null;
+  cap: number | null;
+  fibrosis: string | null;
+  steatosis: string | null;
+  etiology: string | null;
+  created_at: string;
+}
+
+export async function ingestRecommendation(args: {
+  patient_id: string;
+  text: string;
+  lsm?: number | null;
+  cap?: number | null;
+  fibrosis?: string | null;
+  steatosis?: string | null;
+  etiology?: string | null;
+}): Promise<void> {
+  await ensureSchema();
+  if (!args.text.trim()) return;
+  const sql = getDb();
+  await sql`
+    INSERT INTO recommendation_history (patient_id, text, lsm, cap, fibrosis, steatosis, etiology)
+    VALUES (
+      ${args.patient_id},
+      ${args.text},
+      ${args.lsm ?? null},
+      ${args.cap ?? null},
+      ${args.fibrosis ?? null},
+      ${args.steatosis ?? null},
+      ${args.etiology ?? null}
+    );
+  `;
+}
+
+export async function similarRecommendations(args: {
+  fibrosis?: string | null;
+  steatosis?: string | null;
+  etiology?: string | null;
+  limit?: number;
+}): Promise<RecommendationHistoryRow[]> {
+  await ensureSchema();
+  const sql = getDb();
+  const limit = args.limit ?? 8;
+  const rows = await sql`
+    SELECT * FROM recommendation_history
+    WHERE (${args.fibrosis ?? null}::text IS NULL OR fibrosis = ${args.fibrosis ?? null})
+      AND (${args.etiology ?? null}::text IS NULL OR etiology = ${args.etiology ?? null})
+    ORDER BY created_at DESC
+    LIMIT ${limit};
+  `;
+  return rows as RecommendationHistoryRow[];
 }
