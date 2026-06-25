@@ -15,7 +15,11 @@ import { similarRecommendations } from "@/lib/db";
 
 export const runtime = "nodejs";
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+function getGroq() {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) throw new Error("GROQ_API_KEY is not set. Add it in Vercel → Settings → Environment Variables.");
+  return new Groq({ apiKey });
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -56,7 +60,7 @@ ${historyBlock}
 
 Based on the clinical findings and the examples above, write a concise, clinically appropriate recommendation paragraph for this patient. Focus on follow-up interval, lifestyle counseling, and any indicated referrals. Do not invent lab values or imaging not mentioned. Write in professional medical prose, 2-4 sentences.`;
 
-    const completion = await groq.chat.completions.create({
+    const completion = await getGroq().chat.completions.create({
       model: "llama-3.3-70b-versatile",
       max_tokens: 512,
       messages: [{ role: "user", content: prompt }],
